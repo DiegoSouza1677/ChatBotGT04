@@ -42,7 +42,9 @@ payload = {
                     "- Não crie promoções "
                     "- Sempre confirme o pedido antes de finalizar "
                     "- Se faltar alguma informação, pergunte e não suponha "
-                    "- O horário de funcionamento é das 18h às 23h."
+                    "- O horário de funcionamento é das 10h às 23h."
+                    "- pergunte o nome do cliente"
+                    "- Diga o cardápio disponivel"
                 )
             }
         ]
