@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'dev-key-123'
 
 # Helpers
 
-def conversar_gemini(modelo='gemini-2.5-flash',payload=''):
+def conversar_gemini(modelo='gemini-3-flash-preview',payload=''):
     dotenv.load_dotenv()
     API_KEY = os.getenv('GEMINI_API_KEY')
     url_base = f"https://generativelanguage.googleapis.com/v1beta/models"
