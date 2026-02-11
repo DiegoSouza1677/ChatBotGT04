@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow flex-grow-1 overflow-hidden" style="border-radius: 15px;">
+    <div id="chat-window" class="card-body overflow-auto p-4" style="background-color: #e5ddd5; height: 500px;">
+        <div id="message-area">
+            <div class="d-flex justify-content-start mb-4">
+                <div class="bg-white p-3 rounded shadow-sm" style="max-width: 75%; border-radius: 0 15px 15px 15px !important;">
+                    <small class="d-block text-muted fw-bold">Atendente</small>
+                    Olá! Bem-vindo à nossa loja. Como posso te ajudar hoje?
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-footer bg-white border-top-0 p-3">
+        <form id="chat-form" class="input-group">
+            <input type="text" id="user-input" class="form-control border-0 bg-light" placeholder="Digite sua mensagem..." required autocomplete="off">
+            <button class="btn btn-success" type="submit" id="send-btn">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const messageArea = document.getElementById('message-area');
+    const chatWindow = document.getElementById('chat-window');
+
+    function scrollToBottom() {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function appendMessage(sender, text, isUser) {
+        const date = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const alignment = isUser ? 'justify-content-end' : 'justify-content-start';
+        const bgClass = isUser ? 'bg-success text-white' : 'bg-white';
+        const borderRadius = isUser ? '15px 0 15px 15px' : '0 15px 15px 15px';
+        
+        const messageHtml = `
+            <div class="d-flex ${alignment} mb-4">
+                <div class="${bgClass} p-3 rounded shadow-sm" style="max-width: 75%; border-radius: ${borderRadius} !important;">
+                    <small class="d-block ${isUser ? 'text-white-50' : 'text-muted'} fw-bold">${sender}</small>
+                    ${text}
+                    <small class="d-block text-end mt-1" style="font-size: 0.7rem; opacity: 0.8;">${date}</small>
+                </div>
+            </div>
+        `;
+        
+        messageArea.insertAdjacentHTML('beforeend', messageHtml);
+        scrollToBottom();
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = userInput.value.trim();
+        if (!msg) return;
+
+        // 1. Adiciona mensagem do usuário na tela
+        appendMessage('Você', msg, true);
+        userInput.value = '';
+
+        try {
+            // 2. Envia para o Flask
+            const response = await fetch('/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msg: msg })
+            });
+            
+            const data = await response.json();
+
+            // 3. Adiciona resposta do bot
+            setTimeout(() => {
+                appendMessage('Atendente', data.response, false);
+            }, 500); // Pequeno delay para parecer mais natural
+
+        } catch (error) {
+            console.error('Erro:', error);
+            appendMessage('Sistema', 'Erro ao conectar com o servidor.', false);
+        }
+    });
+</script>
+{% endblock %}
