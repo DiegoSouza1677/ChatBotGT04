@@ -85,6 +85,8 @@
         // Limpa o input e mostra a mensagem do usuário
         userInput.value = '';
         addMessage(message, true);
+        
+        const iaEscolhida = "gemini";
 
         try {
             const response = await fetch('/enviar_mensagem', {

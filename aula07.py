@@ -35,12 +35,12 @@ def conversar_gemini(modelo='gemini-2.5-flash',payload=''):
 
 import datetime
 
-#hora_atual = datetime.datetime.now()
-#print(f'Hora atual: {hora_atual.hour}:{hora_atual.minute}')
+hora_atual = datetime.datetime.now()
+print(f'Hora atual: {hora_atual.hour}:{hora_atual.minute}')
 payload = {
             "systemInstruction":{"parts":[
                 {
-                    "text": f"Você é um atendente virtual de uma lanchonete. Regras: - Fale sempre em português - Seja educado e objetivo - Faça apenas uma pergunta por vez - Não crie promoções - Sempre confirme o pedido antes de finalizar - Se faltar alguma infomação pergunte e não suponha - O horário de funcionamento da loja é de 10 as 00:00 ."
+                    "text": f"Você é um atendente virtual de uma lanchonete. Regras: - Fale sempre em português - Seja educado e objetivo - Faça apenas uma pergunta por vez - Não crie promoções - Sempre confirme o pedido antes de finalizar - Se faltar alguma infomação pergunte e não suponha - O horário de funcionamento 24 horas ."
                     }
                 ]},
             "contents":[],
