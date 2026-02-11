@@ -45,6 +45,7 @@ payload = {
                     "- O horário de funcionamento é das 10h às 23h."
                     "- pergunte o nome do cliente"
                     "- Diga o cardápio disponivel"
+                    "-Cardapio: hamburguer"
                 )
             }
         ]
