@@ -1,107 +1,101 @@
-import requests
-from flask import Flask, render_template, request, jsonify
 import os
 import dotenv
-
-dotenv.load_dotenv()
+import requests
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-# Configurações da API
-API_KEY = os.getenv("CHAVE_API_GEMINI")
+# Configurações básicas (em produção, use variáveis de ambiente)
+app.config['SECRET_KEY'] = 'dev-key-123'
 
-MODELO = 'gemini-3-flash-preview' # Ajustado para uma versão estável existente
-URL = f'https://generativelanguage.googleapis.com/v1beta/models/{MODELO}:generateContent?key={API_KEY}'
+# --- ROTAS INTERNAS ---
 
 
-cardapio = {
-    "Hamburguer Clássico": 12.00,
-    "Batata Frita M": 10.00,
-    "Refrigerante Lata": 6.50,
-    "X-Burguer": 18.00,
-    "X-Salada": 22.00,
-    "X-Bacon": 26.00,
-    "Combo Família": 85.00,
-    "Nuggets (10 unid)": 15.00,
-    "Milkshake Chocolate": 14.50,
-    "Suco Natural": 9.00,
-    "Cachorro Quente": 15.00,
-    "Anéis de Cebola": 12.00,
-    "Batata com Cheddar e Bacon": 22.00,
-    "Hambúrguer Artesanal": 32.00,
-    "Água Mineral": 4.00
-}
+# Helpers
+
+def conversar_gemini(modelo='gemini-2.5-flash',payload=''):
+    dotenv.load_dotenv()
+    API_KEY = os.getenv('GEMINI_API_KEY')
+    url_base = f"https://generativelanguage.googleapis.com/v1beta/models"
+    url = f"{url_base}/{modelo}:generateContent?key={API_KEY}"
+    resposta = requests.post(url,json=payload)
+    resposta = resposta.json()
+    # texto_resp = resposta['candidates'][0]['content']['parts'][0]['text']
+    return resposta
+
+
 
 import datetime
-hora = datetime.datetime.now()
-print(hora)
 
-# Payload inicial com estrutura para System Instruction (regras do sistema)
-# O campo 'system_instruction' é suportado pela API do Gemini para definir o comportamento
-config_ia = {
-    "system_instruction": {
-        "parts": [{
-            "text": f' Você é o um atendente virtual de uma lanchonete.Regras de comportamento: 1. Sempre cumprimente o cliente e seja prestativo.           2. Se o cliente perguntar sobre preços, mostre o cardápio que é esse aqui {cardapio} 3. Responda de forma curta e objetiva (máximo 3 frases). 4. Se não souber algo, peça para o cliente aguardar um atendente humano. 5. O horario de funcionamento é 18h as 00:00 e a hora atual é {hora}. 6 . Fazemos entrega até 7k de distância. 7. Para pedidos além dessa distância o cliente deve chamar um uber.8 Se o usuário fizer perguntas fora de contexto, diga que não pode falar sobre isso'
-        }]
-    },
-    "contents": [],
-    "generationConfig":{
+hora_atual = datetime.datetime.now()
+
+print(f'Hora atual: {hora_atual.hour}:{hora_atual.minute}')
+payload = {
+            "systemInstruction":{"parts":[
+                {
+                    "text": f"Você é um atendente virtual de uma lanchonete. Regras: - Fale sempre em português - Seja educado e objetivo - Faça apenas uma pergunta por vez - Não crie promoções - Sempre confirme o pedido antes de finalizar - Se faltar alguma infomação pergunte e não suponha - O horário de funcionamento da loja é de 18 as 00:00 - A hora agora é {hora_atual.hour}:{hora_atual.minute}"
+                    }
+                ]},
+            "contents":[],
+            "generationConfig":{
                 "maxOutputTokens":200,
-                "temperature":0.1,
+                "temperature":1,
             }
-}
+        }
 
 
-def enviar_para_gemini(mensagem_usuario, historico):
-    """
-    Envia a mensagem para a API e retorna a resposta da IA.
-    Recebe a mensagem atual e a lista do histórico de mensagens.
-    """
-    # Adiciona a nova pergunta do usuário ao histórico que será enviado
-    historico.append({"role": "user", "parts": [{"text": mensagem_usuario}]})
-    print(hora)
-    payload = {
-        "system_instruction": config_ia["system_instruction"],
-        "contents": historico
-    }
-
-    try:
-        resposta = requests.post(URL, json=payload)
-        resposta.raise_for_status() # Verifica se houve erro na requisição
-        dados = resposta.json()
-        
-        # Extrai o texto da resposta
-        resposta_ia = dados['candidates'][0]['content']['parts'][0]['text']
-        
-        # Adiciona a resposta da IA ao histórico para manter o contexto na próxima chamada
-        historico.append({"role": "model", "parts": [{"text": resposta_ia}]})
-        
-        return resposta_ia
-    except Exception as e:
-        print(f"Erro na chamada da API: {e}")
-        return "Desculpe, tive um erro ao processar sua resposta."
-
-# --- ROTAS FLASK ---
-
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html")
+    """Rota principal que carrega a interface do chatbot."""
+    return render_template('index.html')
 
-# Simulação de "banco de dados" em memória para o histórico desta sessão
-# Em um sistema real, usaríamos session do Flask ou Redis
-chat_historico = []
+@app.route('/enviar_mensagem', methods=['POST'])
+def enviar_mensagem():
+    dados = request.get_json()
+    mensagem_usuario = dados.get('mensagem', '')
 
-@app.route("/get", methods=["POST"])
-def get_bot_response():
-    user_text = request.json.get("msg")
-    
-    if not user_text:
-        return jsonify({"response": "Mensagem vazia"}), 400
+    if not mensagem_usuario:
+        return jsonify({"resposta": "Mensagem vazia", "status": "erro"}), 400
 
-    # Chama a função que você solicitou
-    resposta_ia = enviar_para_gemini(user_text, chat_historico)
-    
-    return jsonify({"response": resposta_ia})
+    # 1. Adiciona mensagem do usuário ao histórico (Global Payload)
+    content_usuario = {"role": "user", "parts": [{"text": mensagem_usuario}]}
+    payload['contents'].append(content_usuario)
 
-if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0')
+    # 2. Chama a API
+    resposta_json = conversar_gemini(payload=payload)
+
+    # 3. Validação robusta da resposta
+    if resposta_json and 'candidates' in resposta_json:
+        try:
+            # Extrai o conteúdo e o texto especificamente
+            conteudo_ia = resposta_json['candidates'][0]['content']
+            texto_ia = conteudo_ia['parts'][0]['text']
+            
+            # Adiciona a resposta da IA ao histórico (Role deve ser 'model')
+            payload['contents'].append(conteudo_ia)
+
+            return jsonify({
+                "resposta": texto_ia,
+                "status": "sucesso"
+            })
+        except (KeyError, IndexError) as e:
+            print(f"Erro ao processar estrutura do JSON: {e}")
+            return jsonify({"resposta": "Erro ao processar resposta da IA.", "status": "erro"}), 500
+    else:
+        # Se cair aqui, imprima o erro para saber se é API KEY ou cota
+        mensagem_erro = resposta_json.get('error', {}).get('message', 'Erro desconhecido na API')
+        print(f"Falha na Resposta: {mensagem_erro}")
+        return jsonify({
+            "resposta": f"Ops! Tive um problema: {mensagem_erro}",
+            "status": "erro"
+        }), 500
+
+# --- TRATAMENTO DE ERROS ---
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('index.html', erro="Página não encontrada"), 404
+
+if __name__ == '__main__':
+    # debug=True permite que o servidor reinicie sozinho ao salvar alterações
+    app.run(debug=True, port=5000)
